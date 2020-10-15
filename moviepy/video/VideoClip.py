@@ -561,7 +561,15 @@ class VideoClip(Clip):
 
         pos = map(int, pos)
 
-        return blit(img, picture, pos, mask=mask, ismask=self.ismask)
+        #return blit(img, picture, pos, mask=mask, ismask=self.ismask)
+        if img.dtype != 'uint8':
+            img = img.astype('uint8')
+        if picture.dtype != 'uint8':
+            pic = picture.astype('uint8')
+        else:
+            pic = +picture
+
+        return blit(img, pic, pos, mask=mask, ismask=self.ismask)
 
     def add_mask(self):
         """Add a mask VideoClip to the VideoClip.
