@@ -2,7 +2,7 @@
 This module deals with making images (np arrays). It provides drawing
 methods that are difficult to do with the existing Python libraries.
 """
-
+import blit_module
 import numpy as np
 
 
@@ -33,20 +33,39 @@ def blit(im1, im2, pos=None, mask=None, ismask=False):
     if (xp1 >= xp2) or (yp1 >= yp2):
         return im2
 
-    blitted = im1[y1:y2, x1:x2]
+    im1_use_ref = (y1 == 0 and y2 == h1 and x1 == 0 and x2 == w1)
+    im2_use_ref = (yp1 == 0 and yp2 == h2 and xp1 == 0 and xp2 == w2)
 
-    new_im2 = +im2
-
-    if mask is None:
-        new_im2[yp1:yp2, xp1:xp2] = blitted
+    if im1_use_ref:
+        blitted = im1
     else:
-        mask = mask[y1:y2, x1:x2]
+        blitted = im1[y1:y2, x1:x2]
+
+    if mask is not None:
+        blit_region = None
+
+        if not im1_use_ref:
+            mask = mask[y1:y2, x1:x2]
+        if mask.dtype != 'uint8':
+            mask = mask.astype('uint8')
+
+        if not im2_use_ref:
+            blit_region = im2[yp1:yp2, xp1:xp2]
+        else:
+            blit_region = im2
+
         if len(im1.shape) == 3:
-            mask = np.dstack(3 * [mask])
-        blit_region = new_im2[yp1:yp2, xp1:xp2]
-        new_im2[yp1:yp2, xp1:xp2] = (1.0 * mask * blitted + (1.0 - mask) * blit_region)
-    
-    return new_im2.astype('uint8') if (not ismask) else new_im2
+            im2[yp1:yp2, xp1:xp2] = blit_module.fast_blit(blitted, blit_region, mask)
+        else:
+            mask = mask.astype('uint16')
+            im2[yp1:yp2, xp1:xp2] = np.minimum(
+                (mask * blitted + (255 - mask) * blit_region) / 255, 255)
+    else:
+        if im2_use_ref:
+            im2 = blitted
+        else:
+            im2[yp1:yp2, xp1:xp2] = blitted
+    return im2
 
 
 
