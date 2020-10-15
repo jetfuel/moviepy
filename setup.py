@@ -9,6 +9,8 @@ import sys
 from codecs import open
 
 try:
+    import numpy
+    from distutils.core import setup, Extension
     from setuptools import find_packages, setup
     from setuptools.command.test import test as TestCommand
 except ImportError:
@@ -110,6 +112,15 @@ extra_reqs = {"optional": optional_reqs, "doc": doc_reqs, "test": test_reqs}
 with open("README.rst", "r", "utf-8") as file:
     readme = file.read()
 
+extra_compile_args = [
+        "-Ofast",
+        "-funroll-loops"
+    ]
+blit_module = Extension('blit_module',
+    sources=['./cmodule/blit_module.c'],
+    include_dirs=[numpy.get_include()],
+    extra_compile_args=extra_compile_args)
+
 setup(
     name="moviepy",
     version=__version__,
@@ -149,4 +160,5 @@ setup(
     tests_require=test_reqs,
     install_requires=requires,
     extras_require=extra_reqs,
+    ext_modules=[blit_module],
 )
