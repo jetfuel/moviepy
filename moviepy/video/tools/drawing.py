@@ -3,6 +3,7 @@ This module deals with making images (np arrays). It provides drawing
 methods that are difficult to do with the existing Python libraries.
 """
 
+import blit_module
 import numpy as np
 
 
@@ -11,14 +12,67 @@ def blit(im1, im2, pos=None, mask=None):
     Blits ``im1`` on ``im2`` as position ``pos=(x,y)``, using the
     ``mask`` if provided.
     """
+    # if pos is None:
+    #     pos = [0, 0]
+    #
+    # xp, yp = pos
+    # xp1 = max(0, xp)
+    # yp1 = max(0, yp)
+    #
+    # im2.paste(im1, (xp1, yp1), mask)
+    # return im2
     if pos is None:
         pos = [0, 0]
 
+    # xp1,yp1,xp2,yp2 = blit area on im2
+    # x1,y1,x2,y2 = area of im1 to blit on im2
     xp, yp = pos
+    x1 = max(0, -xp)
+    y1 = max(0, -yp)
+    h1, w1 = im1.shape[:2]
+    h2, w2 = im2.shape[:2]
+    xp2 = min(w2, xp + w1)
+    yp2 = min(h2, yp + h1)
+    x2 = min(w1, w2 - xp)
+    y2 = min(h1, h2 - yp)
     xp1 = max(0, xp)
     yp1 = max(0, yp)
 
-    im2.paste(im1, (xp1, yp1), mask)
+    if (xp1 >= xp2) or (yp1 >= yp2):
+        return im2
+
+    im1_use_ref = (y1 == 0 and y2 == h1 and x1 == 0 and x2 == w1)
+    im2_use_ref = (yp1 == 0 and yp2 == h2 and xp1 == 0 and xp2 == w2)
+
+    if im1_use_ref:
+        blitted = im1
+    else:
+        blitted = im1[y1:y2, x1:x2]
+
+    if mask is not None:
+        blit_region = None
+
+        if not im1_use_ref:
+            mask = mask[y1:y2, x1:x2]
+        if mask.dtype != 'uint8':
+            mask = mask.astype('uint8')
+
+        if not im2_use_ref:
+            blit_region = im2[yp1:yp2, xp1:xp2]
+        else:
+            blit_region = im2
+
+        if len(im1.shape) == 3:
+            im2[yp1:yp2, xp1:xp2] = blit_module.fast_blit(blitted, blit_region, mask)
+        else:
+            mask = mask.astype('uint16')
+            im2[yp1:yp2, xp1:xp2] = np.minimum(
+                (mask * blitted + (255 - mask) * blit_region) / 255, 255)
+    else:
+        if im2_use_ref:
+            im2 = blitted
+        else:
+            im2[yp1:yp2, xp1:xp2] = blitted
     return im2
 
 
